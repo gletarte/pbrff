@@ -19,17 +19,15 @@ def launch_slurm_experiment(dataset, experiments, landmarks_method, n_cpu, time,
     submission_script += f"cd $HOME/dev/git/pbrff\n" 
     submission_script += f"date\n" 
     submission_script += f"python experiment.py -d {dataset} -e {' '.join(experiments)} -l {landmarks_method } -n {n_cpu} "
-        
-    print(submission_script)
 
-    with open(exp_file + ".sh", 'w') as out_file:
+    submission_path = exp_file + ".sh"
+    with open(submission_path, 'w') as out_file:
         out_file.write(submission_script)
         
-    return
     call(["sbatch", submission_path])
 
 def main():
-    datasets = ["breast", "ads", "adult", "farm", "mnist17", "mnist49", "mnist56"]
+    datasets = ["ads", "adult", "farm", "mnist17", "mnist49", "mnist56"]
     experiments = ["baseline", "greedy_kernel"]
     landmarks_method = "random"
     n_cpu = 40
