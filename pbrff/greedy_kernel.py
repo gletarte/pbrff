@@ -1,5 +1,6 @@
 import numpy as np
 import pickle
+import time
 
 from math import ceil, sqrt
 
@@ -24,14 +25,18 @@ class GreedyKernelLearner(object):
         self.random_state = check_random_state(random_state)
          
     def sample_omega(self):
+        start_time = time.time()
         self.omega = self.random_state.randn(self.d, self.N) / self.sigma
+        self.sample_time = (time.time() - start_time) * 1000
         
     def compute_loss(self):
+        start_time = time.time()
         cos_values = np.sum(np.einsum('ij,i->ij', self.transform_cos(self.omega, self.dataset['X_train']), self.dataset['y_train']), axis=0)
         sin_values = np.sum(np.einsum('ij,i->ij', self.transform_sin(self.omega, self.dataset['X_train']), self.dataset['y_train']), axis=0)
         
         self.loss = 1/(self.n*(self.n-1)) * (cos_values ** 2 + sin_values ** 2)
         self.loss = (1 - self.loss) / 2 - 1/(self.n -1)
+        self.loss_time = (time.time() - start_time) * 1000
         
     def learn_rff(self, D):
         w = self.omega[:, :D]
@@ -41,22 +46,27 @@ class GreedyKernelLearner(object):
         transformed_X_test = self.transform_sincos(w, self.dataset['X_test'], D)
 
         C_search = []
+        start_time = time.time()
         for C in self.C_range:
             clf = LinearSVC(C=C, random_state=self.random_state)
             clf.fit(transformed_X_train, self.dataset['y_train'])
             err = 1 - accuracy_score(self.dataset['y_valid'], clf.predict(transformed_X_valid))
             C_search.append((err, C, clf))
+        learn_time = (time.time() - start_time) * 1000
 
         val_err, C, clf = sorted(C_search, key=lambda x: x[0])[0]
         train_err = 1 - accuracy_score(self.dataset['y_train'], clf.predict(transformed_X_train))
         y_pred = clf.predict(transformed_X_test)
         test_err = 1 - accuracy_score(self.dataset['y_test'], y_pred)
         f1 = f1_score(self.dataset['y_test'], y_pred)
-
+        
         return dict([("dataset", self.dataset['name']), ("exp", 'greedy'), ("algo", 'RFF'), ("C", C), ("D", D), ("N", self.N), \
-                    ("gamma", self.gamma), ("train_error", train_err), ("val_error", val_err), ("test_error", test_err), ("f1", f1)])
+                    ("gamma", self.gamma), ("train_error", train_err), ("val_error", val_err), ("test_error", test_err), ("f1", f1), \
+                    ("time", self.sample_time + learn_time)])
+                    
                      
     def compute_pb_q(self, beta):
+        start_time = time.time()
         if self.loss is None:
             self.compute_loss()
         t = sqrt(self.n) * beta
@@ -64,6 +74,7 @@ class GreedyKernelLearner(object):
         self.beta = beta
         self.pb_q = -t*self.loss - logsumexp(-t*self.loss)
         self.pb_q = np.exp(self.pb_q)
+        self.pb_q_time = (time.time() - start_time) * 1000
         
     def learn_pbrff(self, D):
         kernel_features = self.omega[:, self.random_state.choice(self.omega.shape[1], D, replace=True, p=self.pb_q)]
@@ -73,11 +84,13 @@ class GreedyKernelLearner(object):
         transformed_X_test = self.transform_sincos(kernel_features, self.dataset['X_test'], D)
 
         C_search = []
+        start_time = time.time()
         for C in self.C_range:
             clf = LinearSVC(C=C, random_state=self.random_state)
             clf.fit(transformed_X_train, self.dataset['y_train'])
             err = 1 - accuracy_score(self.dataset['y_valid'], clf.predict(transformed_X_valid))
             C_search.append((err, C, clf))
+        learn_time = (time.time() - start_time) * 1000
 
         val_err, C, clf = sorted(C_search, key=lambda x: x[0])[0]
         train_err = 1 - accuracy_score(self.dataset['y_train'], clf.predict(transformed_X_train))
@@ -87,9 +100,10 @@ class GreedyKernelLearner(object):
         
         return dict([("dataset", self.dataset['name']), ("exp", 'greedy'), ("algo", 'PBRFF'), ("C", C), ("D", D), ("N", self.N), \
                     ("gamma", self.gamma), ("beta", self.beta), ("train_error", train_err), ("val_error", val_err), \
-                    ("test_error", test_err), ("f1", f1)])
+                    ("test_error", test_err), ("f1", f1), ("time", self.sample_time + self.loss_time + self.pb_q_time + learn_time)])
                      
     def compute_ok_q(self, rho):
+        start_time = time.time()
         self.rho = rho
         v = 2 * self.loss -1
         u = np.ones(self.N) * 1 / self.N
@@ -135,6 +149,7 @@ class GreedyKernelLearner(object):
                 min_lambda = lambda_value
         
         self.ok_q = x
+        self.ok_q_time = (time.time() - start_time) * 1000
         
     def learn_okrff(self, D):
         kernel_features = self.omega[:, self.random_state.choice(self.omega.shape[1], D, replace=True, p=self.ok_q)]
@@ -144,11 +159,13 @@ class GreedyKernelLearner(object):
         transformed_X_test = self.transform_sincos(kernel_features, self.dataset['X_test'], D)
 
         C_search = []
+        start_time = time.time()
         for C in self.C_range:
             clf = LinearSVC(C=C, random_state=self.random_state)
             clf.fit(transformed_X_train, self.dataset['y_train'])
             err = 1 - accuracy_score(self.dataset['y_valid'], clf.predict(transformed_X_valid))
             C_search.append((err, C, clf))
+        learn_time = (time.time() - start_time) * 1000
 
         val_err, C, clf = sorted(C_search, key=lambda x: x[0])[0]
         train_err = 1 - accuracy_score(self.dataset['y_train'], clf.predict(transformed_X_train))
@@ -158,7 +175,7 @@ class GreedyKernelLearner(object):
         
         return dict([("dataset", self.dataset['name']), ("exp", 'greedy'), ("algo", 'OKRFF'), ("C", C), ("D", D), ("N", self.N), \
                     ("gamma", self.gamma), ("rho", self.rho), ("train_error", train_err), ("val_error", val_err), \
-                    ("test_error", test_err), ("f1", f1)])
+                    ("test_error", test_err), ("f1", f1), ("time", self.sample_time + self.loss_time + self.ok_q_time + learn_time)])
         
     def transform_sincos(self, w, X, D):
         WX = np.dot(X, w)
@@ -196,7 +213,7 @@ def compute_greedy_kernel(args, greedy_kernel_learner_file, gamma, D_range, rand
             tmp_results.append(greedy_kernel_learner.learn_okrff(D))
     
     with open(args["output_file"], 'wb') as out_file:
-            pickle.dump(tmp_results, out_file, protocol=4)
+        pickle.dump(tmp_results, out_file, protocol=4)
             
     return args["algo"]
 

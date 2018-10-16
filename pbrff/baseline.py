@@ -30,9 +30,9 @@ def learn_svm(dataset, C, gamma, output_file, n_cpu, random_state):
     val_err = 1 - accuracy_score(dataset['y_valid'], clf.predict(dataset['X_valid']))
     train_err = 1 - accuracy_score(dataset['y_train'], clf.predict(dataset['X_train']))
 
-    results = dict([("dataset", dataset['name']), ("exp", 'baseline'), ("algo", 'SVM'),\
+    results = [dict([("dataset", dataset['name']), ("exp", 'baseline'), ("algo", 'SVM'),\
                     ("C", gs.best_params_['C']), ("gamma", gs.best_params_['gamma']),\
-                    ("train_error", val_err), ("val_error", val_err), ("test_error", test_err), ("f1", f1)])
-                    
+                    ("train_error", val_err), ("val_error", val_err), ("test_error", test_err), ("f1", f1)])]
+    print(results)
     with open(output_file, 'wb') as out_file:
         pickle.dump(results, out_file)

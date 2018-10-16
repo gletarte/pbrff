@@ -82,8 +82,8 @@ def main():
                   
     with open(svm_file, 'rb') as in_file:
         svm_results = pickle.load(in_file)
-
-    gamma = svm_results["gamma"]
+    
+    gamma = svm_results[0]["gamma"]
     
     # Greedy Kernel Learning
     if "greedy_kernel" in args.experiments:
@@ -101,6 +101,7 @@ def main():
         param_grid = ParameterGrid([{'algo': ["pbrff"], 'param': hps['beta']},
                                     {'algo': ["okrff"], 'param': hps['rho']},  
                                     {'algo': ["rff"]}])
+                                    
         param_grid = list(param_grid)
         random_state.shuffle(param_grid)
         results_files = {join(paths['greedy_kernel'], f"{p['algo']}" + (f"_{p['param']}.pkl" if 'param' in p else ".pkl")): p \
