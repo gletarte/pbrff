@@ -14,6 +14,7 @@ from sklearn.model_selection import train_test_split, ParameterGrid
 from pbrff.data_loader import DataLoader
 from pbrff.baseline import learn_svm
 from pbrff.greedy_kernel import GreedyKernelLearner, compute_greedy_kernel
+from pbrff.landmarks_based import LandmarksBasedLearner, compute_landmarks_selection, compute_landmarks_based
 
 import multiprocessing
 from multiprocessing import Pool
@@ -25,7 +26,7 @@ def main():
     parser = argparse.ArgumentParser(description="PAC-Bayes RFF Experiment")
     parser.add_argument('-d', '--dataset', type=str, default="breast")
     parser.add_argument('-e', '--experiments', type=str, nargs='+', default=["landmarks_based"])
-    parser.add_argument('-l', '--landmarks-method', type=str, default="random")
+    parser.add_argument('-l', '--landmarks-method', type=str, nargs='+', default=["random"])
     parser.add_argument('-n', '--n-cpu', type=int, default=-1)
     args = parser.parse_args()
     
@@ -43,10 +44,11 @@ def main():
     # Preparing output paths
     paths = {'cache': join(RESULTS_PATH, "cache", args.dataset),
              'baseline': join(RESULTS_PATH, "baseline", args.dataset),
-             'landmarks_based': join(RESULTS_PATH, "landmarks_based", args.landmarks_method, args.dataset),
              'greedy_kernel': join(RESULTS_PATH, "greedy_kernel", args.dataset)}
+    paths.update({f'landmarks_based_{l}':  join(RESULTS_PATH, "landmarks_based", l, args.dataset) for l in args.landmarks_method})
+    
     for path_name, path in paths.items():
-        if (not exists(path) and path_name in args.experiments + ['cache', 'baseline']): makedirs(path)
+        if (not exists(path)): makedirs(path)
 
     # Loading dataset
     dataloader = DataLoader(random_state=random_state)
@@ -85,6 +87,45 @@ def main():
     
     gamma = svm_results[0]["gamma"]
     
+    # Landmarks-based learning
+    if "landmarks_based" in args.experiments:
+        
+        # Initializing landmarks-based learners by selecting landmarks according to methods
+        param_grid = ParameterGrid([{'method': args.landmarks_method, 'percentage_landmarks': hps['landmarks_percentage']}])
+        param_grid = list(param_grid)
+        
+        random_state.shuffle(param_grid)
+        results_files = {join(paths['cache'], f"{p['method']}_landmarks_based_learner_{100*p['percentage_landmarks']}.pkl"): p \
+                                                                                                            for p in param_grid}
+        results_to_compute = [dict({"output_file":f}, **p) for f, p in results_files.items() if not(exists(f))]
+        
+        if results_to_compute:
+            parallel_func = partial(compute_landmarks_selection, 
+                                    dataset=dataset,
+                                    C_range=hps['C'],
+                                    gamma=gamma,
+                                    random_state=random_state)
+                                
+            computed_results = list(Pool(processes=n_cpu).imap(parallel_func, results_to_compute))
+            
+        # Learning
+        param_grid = ParameterGrid([{'algo': ['pb'], 'D': hps['landmarks_D'], 'method': args.landmarks_method, \
+                                                                                       'percentage_landmarks': hps['landmarks_percentage']},
+                                    {'algo': ['rbf'], 'method': args.landmarks_method, 'percentage_landmarks': hps['landmarks_percentage']}])
+        param_grid = list(param_grid)
+        random_state.shuffle(param_grid)
+        results_files = {join(paths[f"landmarks_based_{p['method']}"], f"{p['algo']}_{100*p['percentage_landmarks']}" \
+                                                        + (f"_{p['D']}.pkl" if 'D' in p else ".pkl")): p for p in param_grid}
+                                                        
+        results_to_compute = [dict({"output_file":f, "input_file": join(paths['cache'], \
+                                    f"{p['method']}_landmarks_based_learner_{100*p['percentage_landmarks']}.pkl")}, **p) \
+                                                                                    for f, p in results_files.items() if not(exists(f))]
+        if results_to_compute:
+            parallel_func = partial(compute_landmarks_based, 
+                                    beta_range=hps['beta'])
+                                
+            computed_results = list(Pool(processes=n_cpu).imap(parallel_func, results_to_compute))
+    
     # Greedy Kernel Learning
     if "greedy_kernel" in args.experiments:
         
@@ -110,10 +151,10 @@ def main():
         
         if results_to_compute:
             parallel_func = partial(compute_greedy_kernel, 
-                                greedy_kernel_learner_file=greedy_kernel_learner_cache_file,
-                                gamma=gamma,
-                                D_range=hps['greedy_kernel_D'], 
-                                random_state=random_state)
+                                    greedy_kernel_learner_file=greedy_kernel_learner_cache_file,
+                                    gamma=gamma,
+                                    D_range=hps['greedy_kernel_D'], 
+                                    random_state=random_state)
                                 
             computed_results = list(Pool(processes=n_cpu).imap(parallel_func, results_to_compute))
     

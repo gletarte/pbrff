@@ -13,6 +13,7 @@ from sklearn.svm import LinearSVC, SVC
 class GreedyKernelLearner(object):
     '''
     Greedy Kernel learner class
+    TODO log sparsity (with epsilon and should we use one for the cut-off)
     '''
     def __init__(self, dataset, C_range, gamma, N, random_state=42):
         self.dataset = dataset
