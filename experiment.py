@@ -76,8 +76,8 @@ def main():
     svm_file = join(paths['baseline'], "svm.pkl")
     if not(exists(svm_file)):
         learn_svm(dataset=dataset,
-                  C=hps['C'],
-                  gamma=hps['gamma'],
+                  C_range=hps['C'],
+                  gamma_range=hps['gamma'],
                   output_file=svm_file,
                   n_cpu=n_cpu,
                   random_state=random_state)

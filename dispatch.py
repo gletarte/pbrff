@@ -7,8 +7,7 @@ RESULTS_PATH = os.environ.get('PBRFF_RESULTS_DIR', join(dirname(abspath(__file__
 PROJECT_ROOT = dirname(abspath(__file__))
     
 def launch_slurm_experiment(dataset, experiments, landmarks_method, n_cpu, time, dispatch_path ):
-    exp_file = join(dispatch_path, f"{dataset}__" + "__".join(experiments) + \
-                        (f"_{landmarks_method}" if "landmarks_based" in experiments else ""))
+    exp_file = join(dispatch_path, f"{dataset}__" + "__".join(experiments))
                         
     submission_script = ""
     submission_script += f"#!/bin/bash\n"
@@ -28,7 +27,7 @@ def launch_slurm_experiment(dataset, experiments, landmarks_method, n_cpu, time,
 
 def main():
     datasets = ["breast"]#["ads", "adult", "farm", "mnist17", "mnist49", "mnist56"]
-    experiments = ["baseline", "greedy_kernel", "landmarks_based"]
+    experiments = ["baseline", "landmarks_based"]
     landmarks_method = ["random", "clustering"]
     n_cpu = 40
     time = 1
