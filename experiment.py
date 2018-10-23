@@ -65,6 +65,9 @@ def main():
            'landmarks_percentage': [0.01, 0.05, 0.1, 0.15, 0.20, 0.25],
            'landmarks_D': [8, 16, 32, 64, 128],
            'rho': [1.0, 0.1, 0.01, 0.001, 0.0001],
+           'tuning_rho': np.logspace(-4, 0, 20),
+           'tuning_beta': np.logspace(1, 3, 20),
+           'tuning_epsilon': 1e-10,
            'greedy_kernel_N': 20000,
            'greedy_kernel_D': [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 120, 140, 160, 180, 200, 225, 250, 275,\
                                300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1250, 1500, 1750, 2000, 2500, 3000,\
@@ -132,15 +135,17 @@ def main():
         # Initializing greedy kernel learner
         greedy_kernel_learner_cache_file = join(paths['cache'], "greedy_kernel_learner.pkl")
         if not exists(greedy_kernel_learner_cache_file):
-            greedy_kernel_learner = GreedyKernelLearner(dataset, hps['C'], gamma, hps['greedy_kernel_N'], random_state)
+            greedy_kernel_learner = GreedyKernelLearner(dataset, hps['C'], gamma, hps['greedy_kernel_N'], random_state, hps['tuning_epsilon'])
             greedy_kernel_learner.sample_omega()
             greedy_kernel_learner.compute_loss()
         
             with open(greedy_kernel_learner_cache_file, 'wb') as out_file:
                 pickle.dump(greedy_kernel_learner, out_file, protocol=4)
             
-        param_grid = ParameterGrid([{'algo': ["pbrff"], 'param': hps['beta']},
-                                    {'algo': ["okrff"], 'param': hps['rho']},  
+        param_grid = ParameterGrid([{'algo': ["tpbrff"], 'param': hps['tuning_beta']},
+                                    {'algo': ["tokrff"], 'param': hps['tuning_rho']},
+                                    #{'algo': ["pbrff"], 'param': hps['beta']},
+                                    #{'algo': ["okrff"], 'param': hps['rho']},  
                                     {'algo': ["rff"]}])
                                     
         param_grid = list(param_grid)
@@ -157,8 +162,6 @@ def main():
                                     random_state=random_state)
                                 
             computed_results = list(Pool(processes=n_cpu).imap(parallel_func, results_to_compute))
-    
-    
     
     print("### DONE ###")
 

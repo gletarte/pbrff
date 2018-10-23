@@ -26,11 +26,11 @@ def launch_slurm_experiment(dataset, experiments, landmarks_method, n_cpu, time,
     call(["sbatch", submission_path])
 
 def main():
-    datasets = ["breast"]#["ads", "adult", "farm", "mnist17", "mnist49", "mnist56"]
-    experiments = ["baseline", "landmarks_based"]
+    datasets = ["breast", "ads", "adult", "farm", "mnist17", "mnist49", "mnist56"]
+    experiments = ["baseline", "greedy_kernel"]
     landmarks_method = ["random", "clustering"]
     n_cpu = 40
-    time = 1
+    time = 6
     
     dispatch_path = join(RESULTS_PATH, "dispatch")
     if not exists(dispatch_path): makedirs(dispatch_path)
