@@ -22,10 +22,12 @@ class LandmarksBasedLearner(object):
         X_train, X_valid, X_test, y_train, y_valid, y_test, name.
 
     C_range : list
-        C values range to search from.
+        C values range to search from (SVM's penalty parameter).
+        Used while learning a linear classifier over the mapped dataset.
 
     gamma : float
-        Gamma value.
+        Gamma value (RBF kernel's bandwith parameter).
+        Used for sampling the Fourier features.
 
     landmarks_selection_method : str
         The landmarks selection method from: {random, clustering}.
@@ -41,19 +43,19 @@ class LandmarksBasedLearner(object):
         X_train, X_valid, X_test, y_train, y_valid, y_test, name.
 
     n : int
-        Number of samples in the training set.
+        Number of samples in the training set (X_train.shape[0]).
 
     d : int
-        Number of features in the dataset.
+        Number of features in the dataset (X_train.shape[1]).
 
     C_range : list
-        C values range to search from.
+        C values range to search from (SVM's penalty parameter).
 
     gamma : float
-        Gamma value.
+        Gamma value (RBF kernel's bandwith parameter).
 
     sigma: float
-        Sigma value computed using gamma value.
+        Sigma value computed using gamma value: sigma = 1 / sqrt(2 * gamma)
 
     landmarks_selection_method : str
         The landmarks selection method from: {random, clustering}.
@@ -62,31 +64,31 @@ class LandmarksBasedLearner(object):
         Random state for all random operations.
 
     percentage_landmarks : float
-            Number of landmarks as a percentage of training set examples.
+        Percentage of training set samples used as landmarks.
 
     n_landmarks : int
-            Number of landmarks.
+        Number of landmarks.
 
     landmarks_X : array, shape = [n_landmarks, d]
         Landmarks.
 
     landmarks_y : array, shape = [n_landmarks]
-        Target labels of the landmarks.
+        Labels of the landmarks.
 
     beta : float
-        Beta value.
+        Beta value (pseudo-posterior "temperature" parameter).
 
     Q : array, shape = [n_landmarks, D]
-        Pseudo-posterior distribution.
+        Pseudo-posterior distributions over the features (one per landmark).
 
     D : int
-        Number of features per landmarks.
+        Number of Fourier features per landmarks.
 
     Omega : array, shape = [n_landmarks, d, D]
-        Randomly sampled Omega.
+        Feature's omega vector sampled from the Fourier distribution.
 
-    loss : array, shape = [n_landmarks, d]
-        Empirical loss.
+    loss : array, shape = [n_landmarks, D]
+        Empirical losses matrix (one loss per Fourier feature)
 
     """
     def __init__(self, dataset, C_range, gamma, landmarks_selection_method, random_state=42):
@@ -104,7 +106,7 @@ class LandmarksBasedLearner(object):
         Parameters
         ----------
         percentage_landmarks : float
-            Number of landmarks to select as the percentage of training set samples.
+            Percentage of training set samples to be used as landmarks.
 
         """
         self.percentage_landmarks = percentage_landmarks
@@ -114,12 +116,12 @@ class LandmarksBasedLearner(object):
         self.landmarks_X, self.landmarks_y = landmarks_selector.fit(self.dataset['X_train'], self.dataset['y_train'])
 
     def compute_Q(self, beta):
-        """Compute Q distribution according to beta value.
+        """Compute pseudo-posterior Q distribution over the Fourier features.
 
         Parameters
         ----------
         beta : float
-            Beta value
+            Beta value (pseudo-posterior "temperature" parameter).
 
         """
         self.beta = beta
@@ -136,31 +138,31 @@ class LandmarksBasedLearner(object):
         Parameters
         ----------
         omega : array, shape = [d, D]
-            omega values.
+            omega values (sampled from the Fourier features).
 
         delta : array, shape = [n, d]
-            Pairwise distance.
+            Pairwise distances.
 
         Returns
         -------
         hypothesis : array, shape = [n, D]
-            Hypothesis.
+            Hypothesis values.
 
         """
         return np.cos(np.dot(delta, omega))
 
     def compute_loss(self, D):
-        """Compute loss for a given number of features per landmarks.
+        """Compute loss for a given number of Fourier features per landmarks.
 
         Parameters
         ----------
         D : int
-            Number of features per landmarks.
+            Number of Fourier features per landmarks.
 
         """
         self.D = D
 
-        # Randomly sampling Omega
+        # Randomly sampling Omega from the Fourier distribution
         self.Omega = self.random_state.randn(self.n_landmarks, self.d, self.D) / (1. / sqrt(2 * self.gamma))
 
         loss = []
@@ -177,7 +179,7 @@ class LandmarksBasedLearner(object):
             if self.landmarks_selection_method == "clustering":
                 landmark_loss = landmark_loss / (self.n)
 
-            # For the random method, case where X_i == landmark needs to be substract
+            # For the random method, case where X_i == landmark needs to be substracted
             elif self.landmarks_selection_method == "random":
                 landmark_loss = (landmark_loss - 1) / (self.n - 1)
 
@@ -191,12 +193,12 @@ class LandmarksBasedLearner(object):
         Parameters
         ----------
         X : array, shape = [n_samples, n_features]
-            The dataset examples.
+            The dataset.
 
         Returns
         -------
         mapped_X : array, shape = [n_samples, n_landmarks]
-            The dataset examples mapped in the landmarks-based representation.
+            The dataset mapped in the landmarks-based representation.
 
         """
         mapped_X = []
@@ -245,18 +247,18 @@ class LandmarksBasedLearner(object):
         Parameters
         ----------
         X : array, shape = [n_samples, n_features]
-            The dataset examples.
+            The dataset.
 
         Returns
         -------
         mapped_X : array, shape = [n_samples, n_landmarks]
-            The dataset examples mapped in the landmarks-based representation.
+            The dataset mapped in the landmarks-based representation.
 
         """
         return np.exp(-self.gamma * cdist(X, self.landmarks_X, 'sqeuclidean'))
 
     def learn_rbf(self):
-        """ Learn using PAC-Bayesion landmarks-based mappping
+        """ Learn a linear SVM over the PAC-Bayesian landmarks-based mapping
 
         Returns
         -------

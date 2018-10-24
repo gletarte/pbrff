@@ -42,7 +42,7 @@ class LandmarksSelector(object):
         Parameters
         ----------
         X : array, shape = [n_samples, n_features]
-            The dataset examples.
+            The dataset samples.
 
         y : array, shape = [n_sample]
             The target labels
@@ -62,13 +62,13 @@ class LandmarksSelector(object):
         landmarks_y = np.zeros(0)
 
         # Defining actual number of landmarks per label it is possible to select according to number of
-        # examples per label present in the dataset.
+        # samples per label present in the dataset.
         n_landmarks = {l:self.n_landmarks_per_label for l in labels}
         labels_counts = {l:np.sum(y == l) for l in labels}
-        label_lacking_examples = [l for l, n in labels_counts.items() if n < self.n_landmarks_per_label]
-        if label_lacking_examples:
-            n_landmarks[label_lacking_examples[0]] = labels_counts[label_lacking_examples[0]]
-            n_landmarks[list(set(labels) - set(label_lacking_examples))[0]] += self.n_landmarks_per_label - labels_counts[label_lacking_examples[0]]
+        label_lacking_samples = [l for l, n in labels_counts.items() if n < self.n_landmarks_per_label]
+        if label_lacking_samples:
+            n_landmarks[label_lacking_samples[0]] = labels_counts[label_lacking_samples[0]]
+            n_landmarks[list(set(labels) - set(label_lacking_samples))[0]] += self.n_landmarks_per_label - labels_counts[label_lacking_samples[0]]
 
         # Selecting landmarks for each target label
         for label in labels:
@@ -84,7 +84,9 @@ class LandmarksSelector(object):
             elif self.method == "random":
                 X_label = X[mask, :]
                 new_landmarks_X = X_label[self.random_state.choice(X_label.shape[0], n_landmarks[label], replace=False), :]
-
+            else:
+                raise Exception(f'Unknown selection method: {self.method}')
+                
             landmarks_X = np.vstack((landmarks_X, new_landmarks_X))
             landmarks_y = np.concatenate((landmarks_y, label*np.ones(n_landmarks[label])))
 
