@@ -9,7 +9,7 @@ from sklearn.metrics import accuracy_score, f1_score
 def learn_svm(dataset, C_range, gamma_range, output_file, n_cpu, random_state):
     """Learn a SVM baseline.
 
-    Using a validation set, hyperparamters C and gamma are selected
+    Using a validation set, hyperparameters C and gamma are selected
     from given ranges through grid search.
 
     Parameters
@@ -22,7 +22,7 @@ def learn_svm(dataset, C_range, gamma_range, output_file, n_cpu, random_state):
         C values range to search from (SVM's penalty parameter).
 
     gamma_range : list
-        Gamma values range to search from (RBF kernel's bandwidth paramter).
+        Gamma values range to search from (RBF kernel's bandwidth parameter).
 
     output_file : str
         File path to save results with pickle
