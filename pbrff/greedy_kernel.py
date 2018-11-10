@@ -251,7 +251,7 @@ class GreedyKernelLearner(object):
         WX = np.dot(X, w)
         return np.hstack((np.cos(WX), np.sin(WX))) / np.sqrt(D)
         
-    def weighted_transform_sincos(self, w, X, Q,  D):
+    def weighted_transform_sincos(self, w, X, Q):
         WX = np.dot(X, w)
         return np.hstack((np.sqrt(Q) * np.cos(WX), np.sqrt(Q) * np.sin(WX)))
         

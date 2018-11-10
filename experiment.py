@@ -152,10 +152,10 @@ def main():
             with open(greedy_kernel_learner_cache_file, 'wb') as out_file:
                 pickle.dump(greedy_kernel_learner, out_file, protocol=4)
             
-        param_grid = ParameterGrid([#{'algo': ["tpbrff"], 'param': hps['tuning_beta']},
-                                    #{'algo': ["tokrff"], 'param': hps['tuning_rho']},
-                                    #{'algo': ["pbrff"], 'param': hps['beta']},
-                                    #{'algo': ["okrff"], 'param': hps['rho']},  
+        param_grid = ParameterGrid([{'algo': ["tpbrff"], 'param': hps['tuning_beta']},
+                                    {'algo': ["tokrff"], 'param': hps['tuning_rho']},
+                                    {'algo': ["pbrff"], 'param': hps['beta']},
+                                    {'algo': ["okrff"], 'param': hps['rho']},  
                                     {'algo': ["rff"]}])
                                     
         param_grid = list(param_grid)
