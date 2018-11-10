@@ -7,6 +7,7 @@ import numpy as np
 from os.path import join, abspath, dirname, exists
 from os import makedirs
 
+from math import ceil, sqrt
 
 from sklearn.utils import check_random_state
 from sklearn.model_selection import train_test_split, ParameterGrid
@@ -57,6 +58,15 @@ def main():
     dataset = {'name': args.dataset,
                'X_train': X_train, 'X_valid': X_valid, 'X_test': X_test,
                'y_train': y_train, 'y_valid': y_valid, 'y_test': y_test}
+               
+    dataset_betas = {'adult': np.logspace(-0.13, -0.11, 40),
+                         'breast': np.logspace(1, 2.5, 40),
+                         'buzz': np.logspace(1, 4, 40),
+                         'farm': np.logspace(1, 4, 40),
+                         'ads': np.logspace(1.9, 2.2, 40),
+                         'mnist17': np.logspace(0.3, 0.7, 40),
+                         'mnist49': np.logspace(0.35, 0.7, 40),
+                         'mnist56': np.logspace(0.15, 0.8, 40)}
     
     # HPs for landmarks-based and greedy kernel learning experiments
     hps = {'gamma': np.logspace(-7, 2, 10),
@@ -66,7 +76,7 @@ def main():
            'landmarks_D': [8, 16, 32, 64, 128],
            'rho': [1.0, 0.1, 0.01, 0.001, 0.0001],
            'tuning_rho': np.logspace(-4, 0, 20),
-           'tuning_beta': np.logspace(1, 3, 20),
+           'tuning_beta': dataset_betas[args.dataset], #np.logspace(1, 3, 20),
            'tuning_epsilon': 1e-10,
            'greedy_kernel_N': 20000,
            'greedy_kernel_D': [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 120, 140, 160, 180, 200, 225, 250, 275,\
@@ -142,8 +152,8 @@ def main():
             with open(greedy_kernel_learner_cache_file, 'wb') as out_file:
                 pickle.dump(greedy_kernel_learner, out_file, protocol=4)
             
-        param_grid = ParameterGrid([{'algo': ["tpbrff"], 'param': hps['tuning_beta']},
-                                    {'algo': ["tokrff"], 'param': hps['tuning_rho']},
+        param_grid = ParameterGrid([#{'algo': ["tpbrff"], 'param': hps['tuning_beta']},
+                                    #{'algo': ["tokrff"], 'param': hps['tuning_rho']},
                                     #{'algo': ["pbrff"], 'param': hps['beta']},
                                     #{'algo': ["okrff"], 'param': hps['rho']},  
                                     {'algo': ["rff"]}])
@@ -162,6 +172,34 @@ def main():
                                     random_state=random_state)
                                 
             computed_results = list(Pool(processes=n_cpu).imap(parallel_func, results_to_compute))
+        '''    
+        with open(greedy_kernel_learner_cache_file, 'rb') as in_file:
+            greedy_kernel_learner = pickle.load(in_file)
+        
+        test = []
+        dataset_betas = {'adult': np.logspace(-0.13, -0.11, 40),
+                         'breast': np.logspace(1, 2.5, 40),
+                         'buzz': np.logspace(1, 4, 40),
+                         'farm': np.logspace(1, 4, 40),
+                         'ads': np.logspace(1.9, 2.2, 40),
+                         'mnist17': np.logspace(0.3, 0.7, 40),
+                         'mnist49': np.logspace(0.35, 0.7, 40),
+                         'mnist56': np.logspace(0.15, 0.8, 40)}
+                         
+        for x in dataset_betas[args.dataset]:
+            t = sqrt(dataset['X_train'].shape[0]) * x
+            eps = 1e-10
+            greedy_kernel_learner.compute_pb_q(beta=t)
+            nnz= greedy_kernel_learner.pb_q[np.where(greedy_kernel_learner.pb_q > eps)]
+            nnz /= np.sum(nnz)
+            D = len(nnz)
+            test.append({"dataset": args.dataset, "x": x,  "t":t, "algo": "TPBRFF", "D": D, "nnz": nnz, "eps": eps})
+        
+        explore_path = join(RESULTS_PATH, "explore", args.dataset)
+        if not(exists(explore_path)): makedirs(explore_path)
+        with open(join(explore_path, "Q.pkl"), 'wb') as out_file:
+            pickle.dump(test, out_file, protocol=4)
+        '''
     
     print("### DONE ###")
 

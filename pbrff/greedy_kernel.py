@@ -71,6 +71,7 @@ class GreedyKernelLearner(object):
     def compute_pb_q(self, beta):
         start_time = time.time()
         t = sqrt(self.n) * beta
+        #t = beta
         
         self.beta = beta
         self.pb_q = -t*self.loss - logsumexp(-t*self.loss)
@@ -113,9 +114,9 @@ class GreedyKernelLearner(object):
         if D == 1:
             kernel_features = kernel_features.reshape(-1, 1)
         
-        transformed_X_train = self.weighted_transform_sincos(kernel_features, self.dataset['X_train'], nnz, D)
-        transformed_X_valid = self.weighted_transform_sincos(kernel_features, self.dataset['X_valid'], nnz, D)
-        transformed_X_test = self.weighted_transform_sincos(kernel_features, self.dataset['X_test'], nnz, D)
+        transformed_X_train = self.weighted_transform_sincos(kernel_features, self.dataset['X_train'], nnz)
+        transformed_X_valid = self.weighted_transform_sincos(kernel_features, self.dataset['X_valid'], nnz)
+        transformed_X_test = self.weighted_transform_sincos(kernel_features, self.dataset['X_test'], nnz)
         
 
         C_search = []
@@ -222,9 +223,9 @@ class GreedyKernelLearner(object):
         if D == 1:
             kernel_features = kernel_features.reshape(-1, 1)
         
-        transformed_X_train = self.weighted_transform_sincos(kernel_features, self.dataset['X_train'], nnz, D)
-        transformed_X_valid = self.weighted_transform_sincos(kernel_features, self.dataset['X_valid'], nnz, D)
-        transformed_X_test = self.weighted_transform_sincos(kernel_features, self.dataset['X_test'], nnz, D)
+        transformed_X_train = self.weighted_transform_sincos(kernel_features, self.dataset['X_train'], nnz)
+        transformed_X_valid = self.weighted_transform_sincos(kernel_features, self.dataset['X_valid'], nnz)
+        transformed_X_test = self.weighted_transform_sincos(kernel_features, self.dataset['X_test'], nnz)
         
 
         C_search = []
@@ -252,7 +253,7 @@ class GreedyKernelLearner(object):
         
     def weighted_transform_sincos(self, w, X, Q,  D):
         WX = np.dot(X, w)
-        return np.hstack((np.sqrt(Q) * np.cos(WX), np.sqrt(Q) * np.sin(WX))) / np.sqrt(D)
+        return np.hstack((np.sqrt(Q) * np.cos(WX), np.sqrt(Q) * np.sin(WX)))
         
     def transform_cos(self, w, X):
         WX = np.dot (X, w)
