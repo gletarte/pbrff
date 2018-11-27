@@ -1,13 +1,14 @@
 import argparse
+from functools import partial
 import multiprocessing
-import os
-import pickle
-import numpy as np
+from multiprocessing import Pool
 
+import os
 from os.path import join, abspath, dirname, exists
 from os import makedirs
 
-from math import ceil, sqrt
+import pickle
+import numpy as np
 
 from sklearn.utils import check_random_state
 from sklearn.model_selection import train_test_split, ParameterGrid
@@ -15,11 +16,7 @@ from sklearn.model_selection import train_test_split, ParameterGrid
 from pbrff.data_loader import DataLoader
 from pbrff.baseline import learn_svm
 from pbrff.greedy_kernel import GreedyKernelLearner, compute_greedy_kernel
-from pbrff.landmarks_based import LandmarksBasedLearner, compute_landmarks_selection, compute_landmarks_based
-
-import multiprocessing
-from multiprocessing import Pool
-from functools import partial
+from pbrff.landmarks_based import compute_landmarks_selection, compute_landmarks_based
 
 RESULTS_PATH = os.environ.get('PBRFF_RESULTS_DIR', join(dirname(abspath(__file__)), "results"))
 
@@ -30,24 +27,24 @@ def main():
     parser.add_argument('-l', '--landmarks-method', type=str, nargs='+', default=["random"])
     parser.add_argument('-n', '--n-cpu', type=int, default=-1)
     args = parser.parse_args()
-    
+
     # Setting random seed for repeatability
     random_seed = 42
     random_state = check_random_state(random_seed)
-    
+
     # Number of CPU for parallel computing
     if args.n_cpu == -1:
         n_cpu = multiprocessing.cpu_count()
     else:
         n_cpu = args.n_cpu
     print(f"Running on {n_cpu} cpus")
-    
+
     # Preparing output paths
     paths = {'cache': join(RESULTS_PATH, "cache", args.dataset),
              'baseline': join(RESULTS_PATH, "baseline", args.dataset),
              'greedy_kernel': join(RESULTS_PATH, "greedy_kernel", args.dataset)}
     paths.update({f'landmarks_based_{l}':  join(RESULTS_PATH, "landmarks_based", l, args.dataset) for l in args.landmarks_method})
-    
+
     for path_name, path in paths.items():
         if (not exists(path)): makedirs(path)
 
@@ -58,16 +55,7 @@ def main():
     dataset = {'name': args.dataset,
                'X_train': X_train, 'X_valid': X_valid, 'X_test': X_test,
                'y_train': y_train, 'y_valid': y_valid, 'y_test': y_test}
-               
-    dataset_betas = {'adult': np.logspace(-0.13, -0.11, 40),
-                         'breast': np.logspace(1, 2.5, 40),
-                         'buzz': np.logspace(1, 4, 40),
-                         'farm': np.logspace(1, 4, 40),
-                         'ads': np.logspace(1.9, 2.2, 40),
-                         'mnist17': np.logspace(0.3, 0.7, 40),
-                         'mnist49': np.logspace(0.35, 0.7, 40),
-                         'mnist56': np.logspace(0.15, 0.8, 40)}
-    
+
     # HPs for landmarks-based and greedy kernel learning experiments
     hps = {'gamma': np.logspace(-7, 2, 10),
            'C': np.logspace(-5, 4, 10),
@@ -75,16 +63,13 @@ def main():
            'landmarks_percentage': [0.01, 0.05, 0.1, 0.15, 0.20, 0.25],
            'landmarks_D': [8, 16, 32, 64, 128],
            'rho': [1.0, 0.1, 0.01, 0.001, 0.0001],
-           'tuning_rho': np.logspace(-4, 0, 20),
-           'tuning_beta': dataset_betas[args.dataset], #np.logspace(1, 3, 20),
-           'tuning_epsilon': 1e-10,
            'greedy_kernel_N': 20000,
            'greedy_kernel_D': [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 120, 140, 160, 180, 200, 225, 250, 275,\
                                300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000, 1250, 1500, 1750, 2000, 2500, 3000,\
                                3500, 4000, 4500, 5000]}
-    
+
     ### Experiments ###
-    
+
     # Baseline (SVM)
     svm_file = join(paths['baseline'], "svm.pkl")
     if not(exists(svm_file)):
@@ -94,33 +79,33 @@ def main():
                   output_file=svm_file,
                   n_cpu=n_cpu,
                   random_state=random_state)
-                  
+
     with open(svm_file, 'rb') as in_file:
         svm_results = pickle.load(in_file)
-    
+
     gamma = svm_results[0]["gamma"]
-    
+
     # Landmarks-based learning
     if "landmarks_based" in args.experiments:
-        
+
         # Initializing landmarks-based learners by selecting landmarks according to methods
         param_grid = ParameterGrid([{'method': args.landmarks_method, 'percentage_landmarks': hps['landmarks_percentage']}])
         param_grid = list(param_grid)
-        
+
         random_state.shuffle(param_grid)
         results_files = {join(paths['cache'], f"{p['method']}_landmarks_based_learner_{100*p['percentage_landmarks']}.pkl"): p \
                                                                                                             for p in param_grid}
         results_to_compute = [dict({"output_file":f}, **p) for f, p in results_files.items() if not(exists(f))]
-        
+
         if results_to_compute:
-            parallel_func = partial(compute_landmarks_selection, 
+            parallel_func = partial(compute_landmarks_selection,
                                     dataset=dataset,
                                     C_range=hps['C'],
                                     gamma=gamma,
                                     random_state=random_state)
-                                
+
             computed_results = list(Pool(processes=n_cpu).imap(parallel_func, results_to_compute))
-            
+
         # Learning
         param_grid = ParameterGrid([{'algo': ['pb'], 'D': hps['landmarks_D'], 'method': args.landmarks_method, \
                                                                                        'percentage_landmarks': hps['landmarks_percentage']},
@@ -129,78 +114,48 @@ def main():
         random_state.shuffle(param_grid)
         results_files = {join(paths[f"landmarks_based_{p['method']}"], f"{p['algo']}_{100*p['percentage_landmarks']}" \
                                                         + (f"_{p['D']}.pkl" if 'D' in p else ".pkl")): p for p in param_grid}
-                                                        
+
         results_to_compute = [dict({"output_file":f, "input_file": join(paths['cache'], \
                                     f"{p['method']}_landmarks_based_learner_{100*p['percentage_landmarks']}.pkl")}, **p) \
                                                                                     for f, p in results_files.items() if not(exists(f))]
         if results_to_compute:
-            parallel_func = partial(compute_landmarks_based, 
+            parallel_func = partial(compute_landmarks_based,
                                     beta_range=hps['beta'])
-                                
+
             computed_results = list(Pool(processes=n_cpu).imap(parallel_func, results_to_compute))
-    
+
     # Greedy Kernel Learning
     if "greedy_kernel" in args.experiments:
-        
+
         # Initializing greedy kernel learner
         greedy_kernel_learner_cache_file = join(paths['cache'], "greedy_kernel_learner.pkl")
         if not exists(greedy_kernel_learner_cache_file):
-            greedy_kernel_learner = GreedyKernelLearner(dataset, hps['C'], gamma, hps['greedy_kernel_N'], random_state, hps['tuning_epsilon'])
+            greedy_kernel_learner = GreedyKernelLearner(dataset, hps['C'], gamma, hps['greedy_kernel_N'], random_state)
             greedy_kernel_learner.sample_omega()
             greedy_kernel_learner.compute_loss()
-        
+
             with open(greedy_kernel_learner_cache_file, 'wb') as out_file:
                 pickle.dump(greedy_kernel_learner, out_file, protocol=4)
-            
-        param_grid = ParameterGrid([{'algo': ["tpbrff"], 'param': hps['tuning_beta']},
-                                    {'algo': ["tokrff"], 'param': hps['tuning_rho']},
-                                    {'algo': ["pbrff"], 'param': hps['beta']},
-                                    {'algo': ["okrff"], 'param': hps['rho']},  
+
+        param_grid = ParameterGrid([{'algo': ["pbrff"], 'param': hps['beta']},
+                                    {'algo': ["okrff"], 'param': hps['rho']},
                                     {'algo': ["rff"]}])
-                                    
+
         param_grid = list(param_grid)
         random_state.shuffle(param_grid)
         results_files = {join(paths['greedy_kernel'], f"{p['algo']}" + (f"_{p['param']}.pkl" if 'param' in p else ".pkl")): p \
                                                                                                             for p in param_grid}
         results_to_compute = [dict({"output_file":f}, **p) for f, p in results_files.items() if not(exists(f))]
-        
+
         if results_to_compute:
-            parallel_func = partial(compute_greedy_kernel, 
+            parallel_func = partial(compute_greedy_kernel,
                                     greedy_kernel_learner_file=greedy_kernel_learner_cache_file,
                                     gamma=gamma,
-                                    D_range=hps['greedy_kernel_D'], 
+                                    D_range=hps['greedy_kernel_D'],
                                     random_state=random_state)
-                                
+
             computed_results = list(Pool(processes=n_cpu).imap(parallel_func, results_to_compute))
-        '''    
-        with open(greedy_kernel_learner_cache_file, 'rb') as in_file:
-            greedy_kernel_learner = pickle.load(in_file)
-        
-        test = []
-        dataset_betas = {'adult': np.logspace(-0.13, -0.11, 40),
-                         'breast': np.logspace(1, 2.5, 40),
-                         'buzz': np.logspace(1, 4, 40),
-                         'farm': np.logspace(1, 4, 40),
-                         'ads': np.logspace(1.9, 2.2, 40),
-                         'mnist17': np.logspace(0.3, 0.7, 40),
-                         'mnist49': np.logspace(0.35, 0.7, 40),
-                         'mnist56': np.logspace(0.15, 0.8, 40)}
-                         
-        for x in dataset_betas[args.dataset]:
-            t = sqrt(dataset['X_train'].shape[0]) * x
-            eps = 1e-10
-            greedy_kernel_learner.compute_pb_q(beta=t)
-            nnz= greedy_kernel_learner.pb_q[np.where(greedy_kernel_learner.pb_q > eps)]
-            nnz /= np.sum(nnz)
-            D = len(nnz)
-            test.append({"dataset": args.dataset, "x": x,  "t":t, "algo": "TPBRFF", "D": D, "nnz": nnz, "eps": eps})
-        
-        explore_path = join(RESULTS_PATH, "explore", args.dataset)
-        if not(exists(explore_path)): makedirs(explore_path)
-        with open(join(explore_path, "Q.pkl"), 'wb') as out_file:
-            pickle.dump(test, out_file, protocol=4)
-        '''
-    
+            
     print("### DONE ###")
 
 if __name__ == '__main__':

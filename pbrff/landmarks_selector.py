@@ -8,10 +8,10 @@ class LandmarksSelector(object):
 
     Parameters
     ----------
-    nb_landmarks_per_label : int
+    nb_landmarks_per_label: int
         The number of landmarks to select per labels in the dataset.
 
-    method : str
+    method: str
         The landmarks selection method from: {random, clustering}.
 
     random_state: None, int or instance of RandomState.
@@ -20,10 +20,10 @@ class LandmarksSelector(object):
 
     Attributes
     ----------
-    nb_landmarks_per_label : int
+    nb_landmarks_per_label: int
         The number of landmarks to select per labels in the dataset.
 
-    method : str
+    method: str
         The landmarks selection method from: {random, clustering}.
 
     random_state: instance of RandomState.
@@ -41,19 +41,19 @@ class LandmarksSelector(object):
 
         Parameters
         ----------
-        X : array, shape = [n_samples, n_features]
+        X: array, shape = [n_samples, n_features]
             The dataset samples.
 
-        y : array, shape = [n_sample]
+        y: array, shape = [n_sample]
             The target labels
 
         Returns
         -------
 
-        landmarks_X : array, shape = [n_landmarks, n_features]
+        landmarks_X: array, shape = [n_landmarks, n_features]
             Selected landmarks.
 
-        landmarks_y : array, shape = [n_landmarks]
+        landmarks_y: array, shape = [n_landmarks]
             Target labels of the selected landmarks.
 
         """
@@ -86,7 +86,7 @@ class LandmarksSelector(object):
                 new_landmarks_X = X_label[self.random_state.choice(X_label.shape[0], n_landmarks[label], replace=False), :]
             else:
                 raise Exception(f'Unknown selection method: {self.method}')
-                
+
             landmarks_X = np.vstack((landmarks_X, new_landmarks_X))
             landmarks_y = np.concatenate((landmarks_y, label*np.ones(n_landmarks[label])))
 

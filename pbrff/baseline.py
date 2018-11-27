@@ -14,23 +14,23 @@ def learn_svm(dataset, C_range, gamma_range, output_file, n_cpu, random_state):
 
     Parameters
     ----------
-    dataset : dict
+    dataset: dict
         The dataset as a dictionnary with the following keys:
         X_train, X_valid, X_test, y_train, y_valid, y_test, name.
 
-    C_range : list
+    C_range: list
         C values range to search from (SVM's penalty parameter).
 
-    gamma_range : list
+    gamma_range: list
         Gamma values range to search from (RBF kernel's bandwidth parameter).
 
-    output_file : str
+    output_file: str
         File path to save results with pickle
 
-    n_cpu : int
+    n_cpu: int
         The number of CPUs to use during the grid search.
 
-    random_state : instance of RandomState
+    random_state: instance of RandomState
         Random state for all random operations.
 
     """
