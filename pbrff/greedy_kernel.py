@@ -105,8 +105,8 @@ class GreedyKernelLearner(object):
         cos_values = np.sum(np.einsum('ij,i->ij', self.transform_cos(self.omega, self.dataset['X_train']), self.dataset['y_train']), axis=0)
         sin_values = np.sum(np.einsum('ij,i->ij', self.transform_sin(self.omega, self.dataset['X_train']), self.dataset['y_train']), axis=0)
 
-        self.loss = 1/(self.n*(self.n-1)) * (cos_values ** 2 + sin_values ** 2)
-        self.loss = (1 - self.loss) / 2 - 1/(self.n -1)
+        self.loss = 1 / (self.n * (self.n - 1)) * (cos_values ** 2 + sin_values ** 2)
+        self.loss = (1 - self.loss) / 2 + 1 / (2 * (self.n -1))
         self.time.append(("loss", (time.time() - start_time) * 1000))
 
     def learn_rff(self, D):
