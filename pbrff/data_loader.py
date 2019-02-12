@@ -25,7 +25,6 @@ class DataLoader(object):
     def load(self, dataset):
         dataset_loaders = {'adult': self._load_adult,
                            'breast': self._load_breast,
-                           'buzz': self._load_buzz,
                            'farm': self._load_farm,
                            'ads': self._load_ads,
                            'mnist17': partial(self._load_mnist, low=1, high=7),
@@ -69,14 +68,6 @@ class DataLoader(object):
     def _load_breast(self):
         breast = load_breast_cancer()
         return train_test_split(breast.data, 2*breast.target-1, test_size=self.test_size, random_state=self.random_state)
-
-    def _load_buzz(self):
-        df = pd.read_csv(join(self.data_path, "Twitter-Absolute-Sigma-500.data"), sep=",", header=None)
-
-        y = 2*df.iloc[:, -1].astype('int32')-1
-        X = df.iloc[:, :-1]
-
-        return train_test_split(X.values, y.values, test_size=self.test_size, random_state=self.random_state)
 
     def _load_farm(self):
         X, y = load_svmlight_file(join(self.data_path, "farm-ads-vect"))
