@@ -24,4 +24,9 @@ with the following arguments:
 * **-l**, **--landmarks-method** with either "random" or "clustering" to select the landmarks selection method for the _landmarks_based_ experiment.
 * **-n**, **--n-cpu** with the desired number of cpus to be used or "-1" to use all available.
 
+Here is an example:
+```zsh
+python experiments.py -d breast -e landmarks_based greedy_kernel -l random -n -1
+```
+
 Of note, to change the various parameters explored in the experiments, modify the values in ``experiments.py`` _hps_ dictionnary.
