@@ -14,9 +14,9 @@ https://arxiv.org/abs/1810.12683
 * ``pbrff/data_loader.py`` contains the code to load the datasets (located in ``data`` folder) used in the experiments.
 
 ## Launching an experiment
-In order to launch an experiment, launch ``experiments.py`` 
+In order to launch an experiment, launch ``experiment.py`` 
 ```zsh
-python experiments.py
+python experiment.py
 ```
 with the following arguments:
 * **-d**, **--datasets** with the dataset name to process from {"breast", "ads", "adult", "farm", "mnist17", "mnist49", "mnist56"}.
@@ -26,7 +26,7 @@ with the following arguments:
 
 Here is an example:
 ```zsh
-python experiments.py -d breast -e landmarks_based greedy_kernel -l random -n -1
+python experiment.py -d breast -e landmarks_based greedy_kernel -l random -n -1
 ```
 
-Of note, to change the various parameters explored in the experiments, modify the values in ``experiments.py`` _hps_ dictionnary.
+Of note, to change the various parameters explored in the experiments, modify the values in ``experiment.py`` _hps_ dictionnary.
