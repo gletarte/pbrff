@@ -4,7 +4,7 @@ presented in Section 6 of the following paper:
 
 > Gaël Letarte, Emilie Morvant, Pascal Germain.
 > Pseudo-Bayesian Learning with Kernel Fourier Transform as Prior
-https://arxiv.org/abs/1810.12683
+http://proceedings.mlr.press/v89/letarte19a.html
 
 ## Content
 * ``experiment.py`` contains the code used to launch experiments and save the results in the ``results`` folder.
@@ -30,3 +30,14 @@ python experiment.py -d breast -e landmarks_based greedy_kernel -l random -n -1
 ```
 
 Of note, to change the various parameters explored in the experiments, modify the values in ``experiment.py`` _hps_ dictionnary.
+
+## BiBTeX
+```
+@inproceedings{letarte2019pseudo,
+  title={Pseudo-Bayesian Learning with Kernel Fourier Transform as Prior},
+  author={Letarte, Ga{\"e}l and Morvant, Emilie and Germain, Pascal},
+  booktitle={The 22nd International Conference on Artificial Intelligence and Statistics},
+  pages={768--776},
+  year={2019}
+}
+```
